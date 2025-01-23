@@ -7,68 +7,49 @@ library identifier: 'jenkins-shared-library@master', retriever: modernSCM(
     ]
 )
 
-pipeline {
+
+pipeline {   
     agent any
     tools {
-        maven 'Maven'
+        maven 'maven 9.3'
     }
-    stages {
-        stage('increment version') {
+
+    environment {
+        IMAGE_NAME = 'ztech101/nana-docker-image:java-maven-1.0'
+    }
+    
+     stages {  
+        stage("build app") {
             steps {
                 script {
-                    echo 'incrementing app version...'
-                    sh 'mvn build-helper:parse-version versions:set \
-                        -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion} \
-                        versions:commit'
-                    def matcher = readFile('pom.xml') =~ '<version>(.+)</version>'
-                    def version = matcher[0][1]
-                    env.IMAGE_NAME = "$version-$BUILD_NUMBER"
+                    echo "Building the application jar..."
+                    buildJar()
                 }
             }
         }
-        stage('build app') {
-            steps {
-                echo 'building application jar...'
-                buildJar()
-            }
-        }
-        stage('build image') {
+
+        stage("build Image") {
             steps {
                 script {
-                    echo 'building the docker image...'
+                    echo 'building the docker image ...'
                     buildImage(env.IMAGE_NAME)
                     dockerLogin()
                     dockerPush(env.IMAGE_NAME)
+
                 }
             }
-        } 
+        }
+
         stage("deploy") {
             steps {
                 script {
                     echo 'deploying docker image to EC2...'
-
-                    def shellCmd = "bash ./server-cmds.sh ${IMAGE_NAME}"
-                    def ec2Instance = "ec2-user@18.184.54.160"
-
+                    def dockerCmd = "docker run -p 8080:8080 -d ${IMAGE_NAME}"
                     sshagent(['ec2-server-key']) {
-                        sh "scp server-cmds.sh ${ec2Instance}:/home/ec2-user"
-                        sh "scp docker-compose.yaml ${ec2Instance}:/home/ec2-user"
-                        sh "ssh -o StrictHostKeyChecking=no ${ec2Instance} ${shellCmd}"
-                    }
-                }
-            }               
+                        sh "ssh -o StrictHostKeyChecking=no ubuntu@44.212.56.235 ${dockerCmd}"
         }
-        stage('commit version update'){
-            steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: 'gitlab-credentials', passwordVariable: 'PASS', usernameVariable: 'USER')]){
-                        sh 'git remote set-url origin https://$USER:$PASS@gitlab.com/twn-devops-bootcamp/latest/09-AWS/java-maven-app.git'
-                        sh 'git add .'
-                        sh 'git commit -m "ci: version bump"'
-                        sh 'git push origin HEAD:jenkins-jobs'
-                    }
                 }
             }
-        }
+        }               
     }
 }
