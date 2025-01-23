@@ -10,7 +10,7 @@ library identifier: 'jenkins-shared-library@master', retriever: modernSCM(
 pipeline {
     agent any
     tools {
-        maven 'Maven'
+        maven 'Maven-3.9.2'
     }
     environment {
         IMAGE_NAME = 'ztech101/nana-docker-image:java-maven-1.0'
