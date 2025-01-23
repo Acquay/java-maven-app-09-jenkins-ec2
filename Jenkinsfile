@@ -1,11 +1,12 @@
 #!/usr/bin/env groovy
 
-library identifier: 'jenkins-shared-library@master', retriever: SCMSourceRetriever(
-    new GitSCMSource(
-        credentialsId: 'gitlab-credentials',
-        remote: 'https://gitlab.com/twn-devops-bootcamp/latest/09-aws/jenkins-shared-library.git'
-    )
+library identifier: 'jenkins-shared-library@master', retriever: modernSCM(
+    [$class: 'GitSCMSource',
+    remote: 'https://gitlab.com/twn-devops-bootcamp/latest/09-aws/jenkins-shared-library.git',
+    credentialsID: 'gitlab-credentials'
+    ]
 )
+
 
 pipeline {   
     agent any
