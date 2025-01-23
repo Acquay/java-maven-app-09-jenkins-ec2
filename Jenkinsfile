@@ -1,12 +1,9 @@
-#!/usr/bin/env groovy
-
 library identifier: 'jenkins-shared-library@master', retriever: modernSCM(
     [$class: 'GitSCMSource',
     remote: 'https://gitlab.com/twn-devops-bootcamp/latest/09-aws/jenkins-shared-library.git',
-    credentialsID: 'gitlab-credentials'
+    credentialsId: 'gitlab-credentials'
     ]
 )
-
 
 pipeline {   
     agent any
@@ -33,7 +30,15 @@ pipeline {
                 script {
                     echo 'Building the Docker image...'
                     buildImage(env.IMAGE_NAME)
-                    dockerLogin()
+
+                    // Securely log in to Docker
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-repo', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                        sh """
+                        echo "$PASS" | docker login -u "$USER" --password-stdin
+                        """
+                    }
+
+                    // Push the Docker image
                     dockerPush(env.IMAGE_NAME)
                 }
             }
